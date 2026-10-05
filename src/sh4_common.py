@@ -508,6 +508,14 @@ class LineClass:
     def tokens_to_IR(self):
         tokens=self.tokens_no_spaces()
 
+        #TODO: manually check if PC,DISP
+            #PC_REL_8 - BT, BF, BT.S, BF.S
+            #PC_REL_12 - BRA, BSR
+            #PC_REL_DISP - MOV.W, MOV.L, MOVA, 
+        #TODO: support hex 
+            #add duplicate for each that has num
+            #add duplicate for neg like -1 and 255
+
         if tokens not in token_lookup:
             self.valid_IR=False
         else:
@@ -557,16 +565,16 @@ def load_instructions():
                             carry=0
 
     #Load token lookup
-    for i in range(2**16):
+    for opcode in range(2**16):
         line=LineClass()
-        line.opcode=i
+        line.opcode=opcode
         #Address not used for lookup but need to set to something
         line.address=i*2
         line.verify_opcode()
         line.opcode_to_IR()
         line.IR_to_tokens()
 
-        #TODO: don't add if argument depends on address
+        excluded=set()
         if line.valid_opcode:
-            token_lookup[line.tokens_no_spaces()]=i
+            token_lookup[line.tokens_no_spaces()]=opcode
 

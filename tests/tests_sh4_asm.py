@@ -78,8 +78,8 @@ def test_instructions():
         #TODO: remove
         print(f"{hex16(opcode)[2:]} disasm: {line_disasm.show_IR()}")
         print(f"{hex16(opcode)[2:]}    asm: {line_asm.show_IR()}")
-        #print()
-        input()
+        print()
+        #input()
 
         check_true(line_asm.IR_equal(line_disasm))
 
