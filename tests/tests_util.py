@@ -16,6 +16,14 @@ def check_eq(a,b):
 def check_ne(a,b):
     assert a!=b,(f"Expected {a}!={b} but equal",line_num())
 
+def check_true(a,msg=None):
+    msg="" if msg==None else f" ({msg})"
+    assert a,(f"Found {a} but expected True{msg}",line_num())
+
+def check_false(a,msg=None):
+    msg="" if msg==None else f" ({msg})"
+    assert a==False,(f"Found {a} but expected False{msg}",line_num())
+
 def check_not_reached(a=None):
     if a==None:
         msg=""

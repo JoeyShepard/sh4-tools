@@ -3,9 +3,7 @@
 from tests.tests_util import *
 from src.sh4_asm import *
 
-#TODO: test alternate instructions like FMOV.S and CMP/EQ
-
-test_list=[
+instruction_test_list=[
 
 (0x0000,".word 0x0000"),
 (0x0001,".word 0x0001"),
@@ -65546,47 +65544,3 @@ test_list=[
 
 ]
 
-
-#Convert instruction text to tokens and compare to disassembled tokens
-def test_tokens():
-    for test in test_list:
-        opcode,text=test
-
-        #Convert assembly text to tokens 
-        line_asm=LineClass()
-        line_asm.text=text
-        line_asm.text_to_tokens()
-
-        #Convert corresponding opcode to tokens
-        line_disasm=LineClass()
-        line_disasm.opcode=opcode
-        line_disasm.address=opcode*2
-        line_disasm.verify_opcode()
-        line_disasm.opcode_to_IR()
-        line_disasm.IR_to_tokens()
-
-        #Check that tokens are equal
-        """
-        if line_asm.tokens==line_disasm.tokens:
-            print(f"{hex16(opcode)[2:]} Match")
-        else:
-            print(f"{hex16(opcode)[2:]} Mismatch")
-            print(f"   asm: {line_asm.tokens}")
-            print(f"disasm: {line_disasm.tokens}")
-            input()
-        """
-        check(line_asm.tokens,line_disasm.tokens)
-
-'''
-def test_instructions():
-    combined=""
-    for test in test_list:
-        address,text=test
-        combined+=text+"\n"
-    lines=assemble(combined)
-    address=0
-    for line in lines:
-        print(hex16(address)[2:],line.text,line.tokens)
-        input()
-        address+=1
-'''

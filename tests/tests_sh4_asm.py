@@ -50,12 +50,44 @@ def test_text_to_tokens():
         #Check if matches
         check(test_line.tokens,expected)
 
+#TODO: test alternate instructions like FMOV.S and CMP/EQ
+
+#Convert instruction text to tokens, IR, and opcode and compare to expected
+def test_instructions():
+    for test in instruction_test_list:
+        opcode,text=test
+
+        #Create IR, tokens, and text from opcode to compare to assembly
+        line_disasm=LineClass()
+        line_disasm.opcode=opcode
+        line_disasm.address=opcode*2
+        line_disasm.verify_opcode()
+        line_disasm.opcode_to_IR()
+        line_disasm.IR_to_tokens()
+        line_disasm.tokens_to_text()
+
+        #Convert assembly text to tokens and check
+        line_asm=LineClass()
+        line_asm.text=text
+        line_asm.text_to_tokens()
+        check(line_asm.tokens,line_disasm.tokens)
+
+        #Create IR from tokens and check
+        line_asm.tokens_to_IR()
+
+        #TODO: remove
+        print(f"{hex16(opcode)[2:]} disasm: {line_disasm.show_IR()}")
+        print(f"{hex16(opcode)[2:]}    asm: {line_asm.show_IR()}")
+        #print()
+        input()
+
+        check_true(line_asm.IR_equal(line_disasm))
 
 #Exported to test runner
 test_list=[
     test_inputs,
     test_text_to_tokens,
-    test_tokens,
+    test_instructions,
     #test_instructions,
     ]
 

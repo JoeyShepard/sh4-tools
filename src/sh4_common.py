@@ -9,7 +9,26 @@ def hex32(num):
 class OperandClass:
     def __init__(self):
         self.type=None
-        self.values=[None,None]
+        self.values=[None]
+
+    def __eq__(self,other):
+        def guard(val):
+            if type(val)==str:
+                return val.upper()
+            else:
+                return None
+        if len(self.values)!=len(other.values):
+            return False
+        else:
+            r1=(guard(self.type)==guard(other.type))
+            r2=(guard(self.values[0])==guard(other.values[0]))
+            if len(self.values)==1:
+                return r1 and r2
+            else:
+                return r1 and r2 and (guard(self.values[1])==guard(other.values[1]))
+
+    def __repr__(self):
+        return f"({self.type}, {self.values})"
 
 class TokenClass:
     def __init__(self,token_type=None,value=None):
@@ -21,6 +40,9 @@ class TokenClass:
 
     def __eq__(self,other):
         return self.type==other.type and self.value==other.value
+
+    def __hash__(self):
+        return hash((self.type,self.value))
 
 class LineClass:
     def __init__(self):
@@ -53,9 +75,24 @@ class LineClass:
 
     #Extract value from opcode given mask letter(d, n, m, or i)
     def __extract(self,letter):
-        #TODO: double check opcode valid? maybe not if always valid before here
         start,_,mask=self.operand_masks[letter]
         return (self.opcode&mask)>>start
+
+    def IR_equal(self,other):
+        def guard(val):
+            if type(val)==str:
+                return val.upper()
+            else:
+                return None
+        return guard(self.inst)==guard(other.inst) and \
+            self.src==other.src and \
+            self.dest==other.dest
+
+    def show_IR(self):
+        return f"{self.inst} {self.src}, {self.dest}"
+
+    def tokens_no_spaces(self):
+        return tuple([token for token in self.tokens if token.type!=" "])
 
     def verify_opcode(self):
         if self.opcode not in opcode_lookup:
@@ -469,9 +506,67 @@ class LineClass:
 
 
     def tokens_to_IR(self):
-        return
+        tokens=self.tokens_no_spaces()
+
+        if tokens not in token_lookup:
+            self.valid_IR=False
+        else:
+            self.opcode=token_lookup[tokens]
+            self.verify_opcode()
+            self.opcode_to_IR()
 
     def IR_to_opcode(self):
         return
 
+def load_instructions():
+    #Load instruction information
+    for k,v in instructions_raw.items():
+        instruction=InstructionClass(k,v)
+        instructions[k]=instruction
+
+        #Add to opcode lookup
+        fields=extract_fields(instruction.mask_raw)
+        if fields==[]:
+            #No operands - add to opcode lookup
+            opcode_lookup[instruction.id]=instruction
+        else:
+            #Add all variants of instruction to lookup
+            field_count=len(fields)
+            counters=[0]*field_count
+            limits=[2**length for _,_,length in fields]
+            offsets=[start for _,start,_ in fields]
+            #Iterate through all possible operand values
+            carry=0
+            while carry==0:
+                opcode=instruction.id
+                carry=1
+                #Generate opcode
+                for i in range(field_count):
+                    opcode|=counters[i]<<offsets[i]
+                    if opcode not in opcode_lookup:
+                        #Only add to lookup if doesn't exist yet. Some instructions have multiple
+                            #representations but first one is preferred (ie FMOV vs FMOV.S).
+                        opcode_lookup[opcode]=instruction
+                    #Propagate carry through permutation counters
+                    if carry==1:
+                        counters[i]+=1
+                        if counters[i]==limits[i]:
+                            counters[i]=0
+                            carry=1
+                        else:
+                            carry=0
+
+    #Load token lookup
+    for i in range(2**16):
+        line=LineClass()
+        line.opcode=i
+        #Address not used for lookup but need to set to something
+        line.address=i*2
+        line.verify_opcode()
+        line.opcode_to_IR()
+        line.IR_to_tokens()
+
+        #TODO: don't add if argument depends on address
+        if line.valid_opcode:
+            token_lookup[line.tokens_no_spaces()]=i
 

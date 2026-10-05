@@ -105,6 +105,9 @@ test_list=[
     test_inputs,
     #Manually testing instructions - replaced by test_automated
     #test_instructions,
+
+    #Disabled due to speed
+    #TODO: re-enable
     test_automated,
     ]
 
