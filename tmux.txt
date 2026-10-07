@@ -1,0 +1,6 @@
+run
+python3
+tests
+asm
+assert
+instructions

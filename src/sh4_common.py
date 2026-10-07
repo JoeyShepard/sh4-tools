@@ -1,5 +1,7 @@
 from src.sh4_instructions import *
 
+#TODO: export tables rather than generate
+
 def hex16(num):
     return "0x"+("0000"+hex(num).upper()[2:])[-4:]
 
@@ -16,7 +18,7 @@ class OperandClass:
             if type(val)==str:
                 return val.upper()
             else:
-                return None
+                return val
         if len(self.values)!=len(other.values):
             return False
         else:
@@ -49,8 +51,19 @@ class LineClass:
         #Source - disassembler, assembler, etc
         self.source=None
 
-        #Opcode
+        self.reset_opcode()
+        self.reset_IR()
+        self.reset_tokens()
+        self.reset_text()
+
+    #Extract value from opcode given mask letter(d, n, m, or i)
+    def __extract(self,letter):
+        start,_,mask=self.operand_masks[letter]
+        return (self.opcode&mask)>>start
+
+    def reset_opcode(self):
         self.opcode=None
+        self.key=None
         self.address=None
         self.group=None
         self.mask_raw=None
@@ -59,40 +72,49 @@ class LineClass:
         self.operand_masks={}
         self.valid_opcode=False
 
-        #IR
-        self.key=None
+    def reset_IR(self):
         self.inst=None
         self.src=OperandClass()
         self.dest=OperandClass()
         self.valid_IR=False
 
-        #Tokens
+    def reset_tokens(self):
         self.tokens=[]
         self.valid_tokens=False
 
-        #Text
+    def reset_text(self):
         self.text=None
-
-    #Extract value from opcode given mask letter(d, n, m, or i)
-    def __extract(self,letter):
-        start,_,mask=self.operand_masks[letter]
-        return (self.opcode&mask)>>start
 
     def IR_equal(self,other):
         def guard(val):
             if type(val)==str:
                 return val.upper()
             else:
-                return None
-        return guard(self.inst)==guard(other.inst) and \
-            self.src==other.src and \
-            self.dest==other.dest
+                return val
+        if self.valid_IR==False and other.valid_IR==False:
+            #Neither has valid IR so equal
+            return True
+        elif self.valid_IR!=other.valid_IR:
+            #One is valid and one is not - not equal
+            return False
+        else:
+            #Both valid - compare
+            return guard(self.inst)==guard(other.inst) and \
+                self.src==other.src and \
+                self.dest==other.dest
 
     def show_IR(self):
         return f"{self.inst} {self.src}, {self.dest}"
 
-    def tokens_no_spaces(self):
-        return tuple([token for token in self.tokens if token.type!=" "])
+    def tokens_pattern(self):
+        #Return pattern for matching - no spaces, uppercase instructions and registers
+        token_list=[]
+        for token in self.tokens:
+            if token.type!=" ":
+                if token.type not in ["hex"]:
+                    token.value=token.value.upper()
+                token_list+=[token]
+        return tuple(token_list)
 
     def verify_opcode(self):
         if self.opcode not in opcode_lookup:
@@ -110,6 +132,7 @@ class LineClass:
 
     #Generate IR from opcode
     def opcode_to_IR(self):
+        self.reset_IR()
         if self.valid_opcode==False:
             #Invalid opcode - no IR to generate
             self.valid_IR=False
@@ -253,6 +276,7 @@ class LineClass:
 
     #Generate tokens from IR
     def IR_to_tokens(self):
+        self.reset_tokens()
         if self.valid_IR==False:
             #Unrecognized opcode - display as .word
             self.tokens=[]
@@ -283,7 +307,6 @@ class LineClass:
                     new_tokens+=[TokenClass("num",str(arg_values[0]))]
                 elif arg_type=="REG_R0":
                     new_tokens+=[TokenClass("reg","R0")]
-
                 elif arg_type in ["REG_GBR","REG_MACH","REG_MACL","REG_PR","REG_SR","REG_VBR","REG_SSR",
                                     "REG_SPC","REG_SGR","REG_DBR","REG_FPUL","REG_FPSCR","REG_XMTRX"]:
                     #Load reg name from modes look up
@@ -368,6 +391,7 @@ class LineClass:
 
     #Generate text from tokens
     def tokens_to_text(self):
+        self.reset_text()
         if self.valid_tokens==False:
             #No valid tokens which only happens in disassembly if forgot to call IR_to_tokens
             self.text="#Unknown!"
@@ -378,6 +402,7 @@ class LineClass:
                 self.text+=token.value
 
     def text_to_tokens(self):
+        self.reset_tokens()
         #Separate into tokens before classifying
         separators="@#(),-+ "
         tokens=[]
@@ -506,25 +531,86 @@ class LineClass:
 
 
     def tokens_to_IR(self):
-        tokens=self.tokens_no_spaces()
+        self.reset_IR()
+        tokens=self.tokens_pattern()
 
-        #TODO: manually check if PC,DISP
-            #PC_REL_8 - BT, BF, BT.S, BF.S
-            #PC_REL_12 - BRA, BSR
-            #PC_REL_DISP - MOV.W, MOV.L, MOVA, 
-        #TODO: support hex 
-            #add duplicate for each that has num
-            #add duplicate for neg like -1 and 255
-
-        if tokens not in token_lookup:
-            self.valid_IR=False
-        else:
+        instruction_found=False
+        if tokens in token_lookup:
+            #Instruction not PC relative - simple lookup
             self.opcode=token_lookup[tokens]
             self.verify_opcode()
             self.opcode_to_IR()
+            instruction_found=True
+        elif len(tokens)==2 and tokens[0].type=="instruction":
+            if tokens[0].value.upper() in ("BT","BT.S","BF","BF.S","BRA","BSR"):
+                #Target
+                if tokens[1].type=="num":
+                    #Already checked that this is valid number
+                    self.dest.values=[int(tokens[1].value)]
+                    instruction_found=True
+                elif tokens[1].type=="hex":
+                    #Already checked that this is valid number
+                    self.dest.values=[int(tokens[1].value,16)]
+                    instruction_found=True
+
+                if instruction_found==True:
+                    #Instruction
+                    self.inst=tokens[0].value.upper()
+
+                    #Addressing mode
+                    if tokens[0].value.upper() in ("BT","BT.S","BF","BF.S"):
+                        self.dest.type="PC_REL_8"
+                    elif tokens[0].value.upper() in ("BRA","BSR"):
+                        self.dest.type="PC_REL_12"
+        elif len(tokens)==4 and tokens[0].type=="instruction" and tokens[0].value.upper() in ("MOV.W","MOV.L","MOVA"):
+            if tokens[2]==TokenClass(",",",") and tokens[3].type=="reg":
+                if (tokens[0].value.upper()=="MOVA" and tokens[3].value.upper()=="R0") or tokens[0].value.upper()!="MOVA":
+                    if tokens[1].type=="num":
+                        #Already checked that this is valid number
+                        self.src.values=[int(tokens[1].value)]
+                        instruction_found=True
+                    elif tokens[1].type=="hex":
+                        #Already checked that this is valid number
+                        self.src.values=[int(tokens[1].value,16)]
+                        instruction_found=True
+
+                    if instruction_found==True:
+                        #Instruction
+                        self.inst=tokens[0].value.upper()
+
+                        #Source addressing mode
+                        if tokens[0] in (TokenClass("instruction","MOV.L"),TokenClass("instruction","MOVA")):
+                            self.src.type="PC_REL_ABS_L"
+                        elif tokens[0]==TokenClass("instruction","MOV.W"):
+                            self.src.type="PC_REL_ABS_W"
+
+                        #Dest register
+                        if tokens[0].value.upper()=="MOVA":
+                            self.dest.type="REG_R0"
+                        else:
+                            self.dest.type="REG_DIR"
+                            self.dest.values=[reg_lookup[tokens[3].value.upper()]]
+
+        self.valid_IR=instruction_found
 
     def IR_to_opcode(self):
-        return
+
+        global modes_actual
+
+        #opcode was probably valid from tokens_to_IR but redo since IR may have changed
+        self.reset_opcode()
+        #TODO: support alternate forms
+            #BT/S, BF/S
+            #@(disp,PC) for all below
+        #TODO: finish other tests like hex and 255 for mov #,Rn
+
+        for i in range(2):
+            src=(i==0)
+            dest=(i==1)
+            arg_type=[self.src.type,self.dest.type][i]
+
+            #Actual modes
+            {'REG_MACL', 'REG_DIR', 'FREG_FR0_DIR', 'REG_SGR', 'PC_REL_12', 'DREG_DIR', 'REG_FPSCR', None, 'REG_SPC', 'REG_GBR', 'REG_BANK', 'GBR_IND_DISP_W', 'REG_VBR', 'REG_IND_DISP_B', 'IND_REG_IND', 'REG_IND_POST', 'GBR_IND_DISP_B', 'REG_DBR', 'REG_IND_DISP_W', 'REG_XMTRX', 'PC_REL_8', 'IMM8_SIGNED', 'REG_SR', 'REG_MACH', 'PC_REL_ABS_W', 'REG_PR', 'REG_FPUL', 'FVREG_DIR', 'PC_REL_ABS_L', 'REG_SSR', 'REG_IND_PRE', 'REG_IND_DISP_L', 'FREG_DIR', 'REG_IND', 'REG_R0', 'IND_GBR_IND', 'IMM8_UNSIGNED', 'GBR_IND_DISP_L'}
 
 def load_instructions():
     #Load instruction information
@@ -565,16 +651,34 @@ def load_instructions():
                             carry=0
 
     #Load token lookup
+    excluded=(
+        (0x9000,0x9FFF),    #MOV.W @(disp,PC),Rn
+        (0xD000,0xDFFF),    #MOV.L @(disp,PC),Rn
+        (0xC700,0xC7FF),    #MOVA @(disp,PC),R0
+        (0x8B00,0x8BFF),    #BF disp
+        (0x8F00,0x8FFF),    #BF.S disp
+        (0x8900,0x89FF),    #BT disp
+        (0x8D00,0x8DFF),    #BT.S disp
+        (0xA000,0xAFFF),    #BRA disp
+        (0xB000,0xBFFF),    #BSR disp
+        )
     for opcode in range(2**16):
-        line=LineClass()
-        line.opcode=opcode
-        #Address not used for lookup but need to set to something
-        line.address=i*2
-        line.verify_opcode()
-        line.opcode_to_IR()
-        line.IR_to_tokens()
+        #Exclude instructions that must be manually constructed
+        for exclusion in excluded:
+            begin,end=exclusion
+            if opcode>=begin and opcode<=end:
+                break
+        else:
+            line=LineClass()
+            line.opcode=opcode
+            #Address not used for lookup but need to set to something
+            line.address=i*2
+            line.verify_opcode()
+            line.opcode_to_IR()
+            line.IR_to_tokens()
 
-        excluded=set()
-        if line.valid_opcode:
-            token_lookup[line.tokens_no_spaces()]=opcode
+            if line.valid_opcode:
+                token_lookup[line.tokens_pattern()]=opcode
+
+
 

@@ -50,8 +50,6 @@ def test_text_to_tokens():
         #Check if matches
         check(test_line.tokens,expected)
 
-#TODO: test alternate instructions like FMOV.S and CMP/EQ
-
 #Convert instruction text to tokens, IR, and opcode and compare to expected
 def test_instructions():
     for test in instruction_test_list:
@@ -64,30 +62,64 @@ def test_instructions():
         line_disasm.verify_opcode()
         line_disasm.opcode_to_IR()
         line_disasm.IR_to_tokens()
-        line_disasm.tokens_to_text()
 
-        #Convert assembly text to tokens and check
+        #Convert assembly text to tokens
         line_asm=LineClass()
         line_asm.text=text
         line_asm.text_to_tokens()
+
+        #Check tokens
         check(line_asm.tokens,line_disasm.tokens)
 
-        #Create IR from tokens and check
+        #Create IR from tokens
         line_asm.tokens_to_IR()
 
-        #TODO: remove
         print(f"{hex16(opcode)[2:]} disasm: {line_disasm.show_IR()}")
         print(f"{hex16(opcode)[2:]}    asm: {line_asm.show_IR()}")
         print()
-        #input()
 
+        #Check IR
         check_true(line_asm.IR_equal(line_disasm))
+
+        #Make sure lowercase token names also work
+        new_tokens=[]
+        for token in line_asm.tokens:
+            token.value=token.value.lower()
+            new_tokens+=[token]
+        line_asm.tokens=new_tokens
+
+        #Create IR from lowercase tokens
+        line_asm.tokens_to_IR()
+
+        #Check IR
+        check_true(line_asm.IR_equal(line_disasm))
+
+        #Create opcode
+        if line_disasm.valid_opcode==True:
+            line_asm.IR_to_opcode()
+
+            #print(f"{hex16(opcode)[2:]} disasm: {line_disasm.show_IR()}")
+            #print(f"{hex16(line_asm.opcode)[2:]}    asm: {line_asm.show_IR()}")
+            #print()
+            #input()
+
+            #TODO: Check opcode
+            
+
+        #TODO: remove
+        #print(f"{hex16(opcode)[2:]} disasm: {line_disasm.show_IR()}")
+        #prinft(f"{hex16(opcode)[2:]}    asm: {line_asm.show_IR()}")
+        #print()
+
+
 
 #Exported to test runner
 test_list=[
     test_inputs,
     test_text_to_tokens,
     test_instructions,
-    #test_instructions,
+
+    #Need to finish assembly first
+    #test_instructions_alt,
     ]
 

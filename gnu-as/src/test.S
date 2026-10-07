@@ -894,4 +894,12 @@
 
     #mov # - 42,R1
 
-    mov #255,R0
+    #mov #255,R0
+
+    mov #-128,R1
+    mov #128,R1
+    mov #0x80,R1
+    mov #-0x80,R1
+
+    cmp/eq #42,R0
+
