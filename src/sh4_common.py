@@ -403,220 +403,330 @@ class LineClass:
 
     def text_to_tokens(self):
         self.reset_tokens()
-        #Separate into tokens before classifying
-        separators="@#(),-+ "
-        tokens=[]
-        current=""
-        for c in self.text:
-            if c in separators:
-                if current!="":
-                    tokens+=[current]
-                    current=""
-                if c==" " and len(tokens)>0 and tokens[-1]==len(tokens[-1])*" ":
-                    tokens[-1]+=" " 
+        if self.text!=None:
+            #Separate into tokens before classifying
+            separators="@#(),-+ "
+            tokens=[]
+            current=""
+            for c in self.text:
+                if c in separators:
+                    if current!="":
+                        tokens+=[current]
+                        current=""
+                    if c==" " and len(tokens)>0 and tokens[-1]==len(tokens[-1])*" ":
+                        tokens[-1]+=" " 
+                    else:
+                        tokens+=[c]
                 else:
-                    tokens+=[c]
-            else:
-                current+=c
-        if current!="":
-            tokens+=[current]
+                    current+=c
+            if current!="":
+                tokens+=[current]
 
-        #Token lists for classifying
-        regs=["R0","R1","R2","R3","R4","R5","R6","R7","R8",
-                "R9","R10","R11","R12","R13","R14","R15"]
-        regs_special=["GBR","MACH","MACL","PR","SR","VBR","SSR",
-                        "SPC","SGR","DBR","FPUL","FPSCR","XMTRX"]
-        reg_banks=["R0_BANK","R1_BANK","R2_BANK","R3_BANK",
-                "R4_BANK","R5_BANK","R6_BANK","R7_BANK"]
-        fregs=["FR0","FR1","FR2","FR3","FR4","FR5","FR6","FR7","FR8",
-                "FR9","FR10","FR11","FR12","FR13","FR14","FR15"]
-        dregs=["DR0","DR2","DR4","DR6","DR8","DR10","DR12","DR14"]
-        xregs=["XD0","XD2","XD4","XD6","XD8","XD10","XD12","XD14"]
-        fvregs=["FV0","FV4","FV8","FV12"]
-        directives=[".WORD"]
-        instructions=["ADD","ADDC","ADDV","AND","AND.B","BF","BF.S","BF/S","BRA","BRAF",
-                        "BSR","BSRF","BT","BT.S","BT/S","CLRMAC","CLRS","CLRT","CMP/EQ",
-                        "CMP/GE","CMP/GT","CMP/HI","CMP/HS","CMP/PL","CMP/PZ","CMP/STR",
-                        "DIV0S","DIV0U","DIV1","DMULS.L","DMULU.L","DT","EXTS.B","EXTS.W",
-                        "EXTU.B","EXTU.W","FABS","FADD","FCMP/EQ","FCMP/GT","FCNVDS",
-                        "FCNVSD","FDIV","FIPR","FLDI0","FLDI1","FLDS","FLOAT","FMAC",
-                        "FMOV","FMOV.S","FMUL","FNEG","FPCHG","FRCHG","FSCA","FSCHG",
-                        "FSQRT","FSRRA","FSTS","FSUB","FTRC","FTRV","ICBI","JMP","JSR",
-                        "LDC","LDC.L","LDS","LDS.L","LDTLB","MAC.L","MAC.W","MOV","MOV.B",
-                        "MOV.L","MOV.W","MOVA","MOVCA.L","MOVCO.L","MOVLI.L","MOVT",
-                        "MOVUA.L","MUL.L","MULS.W","MULU.W","NEG","NEGC","NOP","NOT",
-                        "OCBI","OCBP","OCBWB","OR","OR.B","PREF","PREFI","ROTCL","ROTCR",
-                        "ROTL","ROTR","RTE","RTS","SETS","SETT","SHAD","SHAL","SHAR",
-                        "SHLD","SHLL","SHLL16","SHLL2","SHLL8","SHLR","SHLR16","SHLR2",
-                        "SHLR8","SLEEP","STC","STC.L","STS","STS.L","SUB","SUBC","SUBV",
-                        "SWAP.B","SWAP.W","SYNCO","TAS.B","TRAPA","TST","TST.B","XOR",
-                        "XOR.B","XTRCT"]
+            #Token lists for classifying
+            regs=["R0","R1","R2","R3","R4","R5","R6","R7","R8",
+                    "R9","R10","R11","R12","R13","R14","R15"]
+            regs_special=["GBR","MACH","MACL","PR","SR","VBR","SSR",
+                            "SPC","SGR","DBR","FPUL","FPSCR","XMTRX"]
+            reg_banks=["R0_BANK","R1_BANK","R2_BANK","R3_BANK",
+                    "R4_BANK","R5_BANK","R6_BANK","R7_BANK"]
+            fregs=["FR0","FR1","FR2","FR3","FR4","FR5","FR6","FR7","FR8",
+                    "FR9","FR10","FR11","FR12","FR13","FR14","FR15"]
+            dregs=["DR0","DR2","DR4","DR6","DR8","DR10","DR12","DR14"]
+            xregs=["XD0","XD2","XD4","XD6","XD8","XD10","XD12","XD14"]
+            fvregs=["FV0","FV4","FV8","FV12"]
+            directives=[".WORD"]
+            instructions=["ADD","ADDC","ADDV","AND","AND.B","BF","BF.S","BF/S","BRA","BRAF",
+                            "BSR","BSRF","BT","BT.S","BT/S","CLRMAC","CLRS","CLRT","CMP/EQ",
+                            "CMP/GE","CMP/GT","CMP/HI","CMP/HS","CMP/PL","CMP/PZ","CMP/STR",
+                            "DIV0S","DIV0U","DIV1","DMULS.L","DMULU.L","DT","EXTS.B","EXTS.W",
+                            "EXTU.B","EXTU.W","FABS","FADD","FCMP/EQ","FCMP/GT","FCNVDS",
+                            "FCNVSD","FDIV","FIPR","FLDI0","FLDI1","FLDS","FLOAT","FMAC",
+                            "FMOV","FMOV.S","FMUL","FNEG","FPCHG","FRCHG","FSCA","FSCHG",
+                            "FSQRT","FSRRA","FSTS","FSUB","FTRC","FTRV","ICBI","JMP","JSR",
+                            "LDC","LDC.L","LDS","LDS.L","LDTLB","MAC.L","MAC.W","MOV","MOV.B",
+                            "MOV.L","MOV.W","MOVA","MOVCA.L","MOVCO.L","MOVLI.L","MOVT",
+                            "MOVUA.L","MUL.L","MULS.W","MULU.W","NEG","NEGC","NOP","NOT",
+                            "OCBI","OCBP","OCBWB","OR","OR.B","PREF","PREFI","ROTCL","ROTCR",
+                            "ROTL","ROTR","RTE","RTS","SETS","SETT","SHAD","SHAL","SHAR",
+                            "SHLD","SHLL","SHLL16","SHLL2","SHLL8","SHLR","SHLR16","SHLR2",
+                            "SHLR8","SLEEP","STC","STC.L","STS","STS.L","SUB","SUBC","SUBV",
+                            "SWAP.B","SWAP.W","SYNCO","TAS.B","TRAPA","TST","TST.B","XOR",
+                            "XOR.B","XTRCT"]
 
-        #Classify all tokens
-        last_minus_index=None
-        for token in tokens:
-            token_added=False
-            if token==len(token)*" ":
-                self.tokens+=[TokenClass(" ",token)]
-            elif token in separators:
-                self.tokens+=[TokenClass(token,token)]
-                token_added=True
-            elif token.upper() in regs:
-                self.tokens+=[TokenClass("reg",token)]
-                token_added=True
-            elif token.upper() in regs_special:
-                self.tokens+=[TokenClass("reg_special",token)]
-                token_added=True
-            elif token.upper() in reg_banks:
-                self.tokens+=[TokenClass("reg_bank",token)]
-                token_added=True
-            elif token.upper() in fregs:
-                self.tokens+=[TokenClass("freg",token)]
-                token_added=True
-            elif token.upper() in dregs:
-                self.tokens+=[TokenClass("dreg",token)]
-                token_added=True
-            elif token.upper() in fvregs:
-                self.tokens+=[TokenClass("fvreg",token)]
-                token_added=True
-            elif token.upper() in directives:
-                self.tokens+=[TokenClass("directive",token)]
-                token_added=True
-            elif token.upper() in instructions:
-                self.tokens+=[TokenClass("instruction",token)]
-                token_added=True
-            else:
-                #Check if hex
-                if len(token)>=3 and token[:2]=="0x":
-                    for c in token[2:]:
-                        if c.upper() not in "0123456789ABCDEF":
-                            #Not hex
-                            break
-                    else:
-                        self.tokens+=[TokenClass("hex",token)]
-                        token_added=True
-
-                #Check if number
-                if token_added==False:
-                    for c in token:
-                        if c not in "0123456789":
-                            #Not number
-                            break
-                    else:
-                        self.tokens+=[TokenClass("num",token)]
-                        token_added=True
-
-                #Otherwise, mark as other
-                if token_added==False:
-                    self.tokens+=[TokenClass("other",token)]
+            #Classify all tokens
+            last_minus_index=None
+            for token in tokens:
+                token_added=False
+                if token==len(token)*" ":
+                    self.tokens+=[TokenClass(" ",token)]
+                elif token in separators:
+                    self.tokens+=[TokenClass(token,token)]
                     token_added=True
+                elif token.upper() in regs:
+                    self.tokens+=[TokenClass("reg",token)]
+                    token_added=True
+                elif token.upper() in regs_special:
+                    self.tokens+=[TokenClass("reg_special",token)]
+                    token_added=True
+                elif token.upper() in reg_banks:
+                    self.tokens+=[TokenClass("reg_bank",token)]
+                    token_added=True
+                elif token.upper() in fregs:
+                    self.tokens+=[TokenClass("freg",token)]
+                    token_added=True
+                elif token.upper() in dregs:
+                    self.tokens+=[TokenClass("dreg",token)]
+                    token_added=True
+                elif token.upper() in fvregs:
+                    self.tokens+=[TokenClass("fvreg",token)]
+                    token_added=True
+                elif token.upper() in directives:
+                    self.tokens+=[TokenClass("directive",token)]
+                    token_added=True
+                elif token.upper() in instructions:
+                    self.tokens+=[TokenClass("instruction",token)]
+                    token_added=True
+                else:
+                    #Check if hex
+                    if len(token)>=3 and token[:2]=="0x":
+                        for c in token[2:]:
+                            if c.upper() not in "0123456789ABCDEF":
+                                #Not hex
+                                break
+                        else:
+                            self.tokens+=[TokenClass("hex",token)]
+                            token_added=True
 
-            #Keep track of minus in case belongs to number
-            if token_added==True:
-                if self.tokens[-1]==TokenClass("-","-"):
-                    #Just added a minus - record location
-                    last_minus_index=len(self.tokens)-1
-                elif self.tokens[-1].type in ("num","hex"):
-                    #Add minus to number if exists
-                    if last_minus_index!=None:
-                        #Remove minus token
-                        self.tokens=self.tokens[:last_minus_index]+self.tokens[last_minus_index+1:]
+                    #Check if number
+                    if token_added==False:
+                        for c in token:
+                            if c not in "0123456789":
+                                #Not number
+                                break
+                        else:
+                            self.tokens+=[TokenClass("num",token)]
+                            token_added=True
+
+                    #Otherwise, mark as other
+                    if token_added==False:
+                        self.tokens+=[TokenClass("other",token)]
+                        token_added=True
+
+                #Keep track of minus in case belongs to number
+                if token_added==True:
+                    if self.tokens[-1]==TokenClass("-","-"):
+                        #Just added a minus - record location
+                        last_minus_index=len(self.tokens)-1
+                    elif self.tokens[-1].type in ("num","hex"):
+                        #Add minus to number if exists
+                        if last_minus_index!=None:
+                            #Remove minus token
+                            self.tokens=self.tokens[:last_minus_index]+self.tokens[last_minus_index+1:]
+                            last_minus_index=None
+
+                            #Add minus to last added value
+                            self.tokens[-1].value="-"+self.tokens[-1].value
+                    elif self.tokens[-1].type!=" ":
+                        #Mark that last token wasn't minus but ignore spaces
                         last_minus_index=None
 
-                        #Add minus to last added value
-                        self.tokens[-1].value="-"+self.tokens[-1].value
-                elif self.tokens[-1].type!=" ":
-                    #Mark that last token wasn't minus but ignore spaces
-                    last_minus_index=None
-
+        self.valid_tokens=True
 
     def tokens_to_IR(self):
         self.reset_IR()
-        tokens=self.tokens_pattern()
+        if self.valid_tokens==False:
+            #Invalid tokens - no IR to generate
+            self.valid_IR=False
+        else:
+            tokens=self.tokens_pattern()
 
-        instruction_found=False
-        if tokens in token_lookup:
-            #Instruction not PC relative - simple lookup
-            self.opcode=token_lookup[tokens]
-            self.verify_opcode()
-            self.opcode_to_IR()
-            instruction_found=True
-        elif len(tokens)==2 and tokens[0].type=="instruction":
-            if tokens[0].value.upper() in ("BT","BT.S","BF","BF.S","BRA","BSR"):
-                #Target
-                if tokens[1].type=="num":
-                    #Already checked that this is valid number
-                    self.dest.values=[int(tokens[1].value)]
-                    instruction_found=True
-                elif tokens[1].type=="hex":
-                    #Already checked that this is valid number
-                    self.dest.values=[int(tokens[1].value,16)]
-                    instruction_found=True
-
-                if instruction_found==True:
-                    #Instruction
-                    self.inst=tokens[0].value.upper()
-
-                    #Addressing mode
-                    if tokens[0].value.upper() in ("BT","BT.S","BF","BF.S"):
-                        self.dest.type="PC_REL_8"
-                    elif tokens[0].value.upper() in ("BRA","BSR"):
-                        self.dest.type="PC_REL_12"
-        elif len(tokens)==4 and tokens[0].type=="instruction" and tokens[0].value.upper() in ("MOV.W","MOV.L","MOVA"):
-            if tokens[2]==TokenClass(",",",") and tokens[3].type=="reg":
-                if (tokens[0].value.upper()=="MOVA" and tokens[3].value.upper()=="R0") or tokens[0].value.upper()!="MOVA":
+            instruction_found=False
+            if tokens in token_lookup:
+                #Instruction not PC relative - simple lookup
+                self.opcode=token_lookup[tokens]
+                self.verify_opcode()
+                self.opcode_to_IR()
+                instruction_found=True
+            elif len(tokens)==2 and tokens[0].type=="instruction":
+                if tokens[0].value.upper() in ("BT","BT.S","BF","BF.S","BRA","BSR"):
+                    #Target
                     if tokens[1].type=="num":
                         #Already checked that this is valid number
-                        self.src.values=[int(tokens[1].value)]
+                        self.dest.values=[int(tokens[1].value)]
                         instruction_found=True
                     elif tokens[1].type=="hex":
                         #Already checked that this is valid number
-                        self.src.values=[int(tokens[1].value,16)]
+                        self.dest.values=[int(tokens[1].value,16)]
                         instruction_found=True
 
                     if instruction_found==True:
                         #Instruction
                         self.inst=tokens[0].value.upper()
 
-                        #Source addressing mode
-                        if tokens[0] in (TokenClass("instruction","MOV.L"),TokenClass("instruction","MOVA")):
-                            self.src.type="PC_REL_ABS_L"
-                        elif tokens[0]==TokenClass("instruction","MOV.W"):
-                            self.src.type="PC_REL_ABS_W"
+                        if self.opcode==0x8900:
+                            print("manual mode found")
 
-                        #Dest register
-                        if tokens[0].value.upper()=="MOVA":
-                            self.dest.type="REG_R0"
-                        else:
-                            self.dest.type="REG_DIR"
-                            self.dest.values=[reg_lookup[tokens[3].value.upper()]]
+                        #Addressing mode
+                        if tokens[0].value.upper() in ("BT","BT.S","BF","BF.S"):
+                            self.dest.type="PC_REL_8"
+                        elif tokens[0].value.upper() in ("BRA","BSR"):
+                            self.dest.type="PC_REL_12"
+            elif len(tokens)==4 and tokens[0].type=="instruction" and tokens[0].value.upper() in ("MOV.W","MOV.L","MOVA"):
+                if tokens[2]==TokenClass(",",",") and tokens[3].type=="reg":
+                    if (tokens[0].value.upper()=="MOVA" and tokens[3].value.upper()=="R0") or tokens[0].value.upper()!="MOVA":
+                        if tokens[1].type=="num":
+                            #Already checked that this is valid number
+                            self.src.values=[int(tokens[1].value)]
+                            instruction_found=True
+                        elif tokens[1].type=="hex":
+                            #Already checked that this is valid number
+                            self.src.values=[int(tokens[1].value,16)]
+                            instruction_found=True
 
-        self.valid_IR=instruction_found
+                        if instruction_found==True:
+                            #Instruction
+                            self.inst=tokens[0].value.upper()
+
+                            #Source addressing mode
+                            if tokens[0] in (TokenClass("instruction","MOV.L"),TokenClass("instruction","MOVA")):
+                                self.src.type="PC_REL_ABS_L"
+                            elif tokens[0]==TokenClass("instruction","MOV.W"):
+                                self.src.type="PC_REL_ABS_W"
+
+                            #Dest register
+                            if tokens[0].value.upper()=="MOVA":
+                                self.dest.type="REG_R0"
+                            else:
+                                self.dest.type="REG_DIR"
+                                self.dest.values=[reg_lookup[tokens[3].value.upper()]]
+
+            self.valid_IR=instruction_found
+
+    def __operand_prepare(self,operand_type,values):
+        return_values=[]
+        if len(values)>=1:
+            value=values[0]
+
+        print("prepare inner:",operand_type,values)
+
+        if operand_type in ["REG_DIR","IND_REG_IND","REG_IND_POST","REG_IND","REG_IND_PRE"]:
+            if len(values)!=1 or value==None or value<0 or value>15:
+                return False,[]
+            return True,[value]
+        elif operand_type in ["REG_BANK"]:
+            if len(values)!=1 or value==None or value<0 or value>7:
+                return False,[]
+            return True,[value]
+        elif operand_type in ["REG_IND_DISP_L"]:
+            if len(values)!=2 or value==None or value<0 or value>60 or value%4!=0:
+                return False,[]
+            value2=values[1]
+            if value2==None or value2<0 or value2>15:
+                return False,[]
+            return True,[int(value/4),value2]
+        elif operand_type in ["REG_IND_DISP_W"]:
+            if len(values)!=2 or value==None or value<0 or value>31:
+                return False,[]
+            value2=values[1]
+            if value2==None or value2<0 or value2>15:
+                return False,[]
+            return True,[int(value/2),value2]
+        elif operand_type in ["REG_IND_DISP_B"]:
+            if len(values)!=2 or value==None or value<0 or value>15:
+                return False,[]
+            value2=values[1]
+            if value2==None or value2<0 or value2>31:
+                return False,[]
+            return True,[value,value2]
+        elif operand_type in ["IMM8_SIGNED"]:
+            if len(values)!=1 or value==None or value<-128 or value>255:
+                return False,[]
+            if value<0:
+                value=256+value
+            return True,[value]
+        else:
+            return False,[]
 
     def IR_to_opcode(self):
-
-        global modes_actual
-
-        #opcode was probably valid from tokens_to_IR but redo since IR may have changed
         self.reset_opcode()
-        #TODO: support alternate forms
-            #BT/S, BF/S
-            #@(disp,PC) for all below
-        #TODO: finish other tests like hex and 255 for mov #,Rn
+        if self.valid_IR==False:
+            #Invalid IR - no opcode to generate
+            self.valid_opcode=False
+        else:
+            #opcode was probably valid from tokens_to_IR but redo since IR may have changed
+            self.reset_opcode()
+            #TODO: support alternate forms
+                #BT/S, BF/S
+                #@(disp,PC) for all below
+            #TODO: finish other tests like hex and 255 for mov #,Rn
 
-        for i in range(2):
-            src=(i==0)
-            dest=(i==1)
-            arg_type=[self.src.type,self.dest.type][i]
+            pattern=[self.inst.upper()]
+            if self.src.type!=None:
+                pattern+=[self.src.type.upper()]
+            if self.dest.type!=None:
+                pattern+=[self.dest.type.upper()]
 
-            #Actual modes
-            {'REG_MACL', 'REG_DIR', 'FREG_FR0_DIR', 'REG_SGR', 'PC_REL_12', 'DREG_DIR', 'REG_FPSCR', None, 'REG_SPC', 'REG_GBR', 'REG_BANK', 'GBR_IND_DISP_W', 'REG_VBR', 'REG_IND_DISP_B', 'IND_REG_IND', 'REG_IND_POST', 'GBR_IND_DISP_B', 'REG_DBR', 'REG_IND_DISP_W', 'REG_XMTRX', 'PC_REL_8', 'IMM8_SIGNED', 'REG_SR', 'REG_MACH', 'PC_REL_ABS_W', 'REG_PR', 'REG_FPUL', 'FVREG_DIR', 'PC_REL_ABS_L', 'REG_SSR', 'REG_IND_PRE', 'REG_IND_DISP_L', 'FREG_DIR', 'REG_IND', 'REG_R0', 'IND_GBR_IND', 'IMM8_UNSIGNED', 'GBR_IND_DISP_L'}
+            pattern=tuple(pattern)
+
+            print(pattern,pattern in IR_lookup)
+
+            if pattern in IR_lookup:
+                instruction=IR_lookup[pattern]
+                self.opcode=instruction.id
+                for i in range(2):
+                    src=(i==0)
+                    dest=(i==1)
+                    arg_type=[self.src.type,self.dest.type][i]
+                    arg_values=[self.src.values,self.dest.values][i]
+                    reg_letter="mn"[i]
+                   
+                    valid,values=self.__operand_prepare(arg_type,arg_values)
+                    print("prepared value:",values)
+                    if valid==False:
+                        #No arg or invalid arg like R16
+                        pass
+                    else:
+                        if arg_type in ["REG_DIR","IND_REG_IND","REG_IND_POST","REG_BANK","REG_IND","REG_IND_PRE",
+                                        ]:
+                           start,length,mask=instruction.operand_masks[reg_letter]
+                           update=values[0]<<start
+                           print("update:",update)
+                           self.opcode|=update
+                        elif arg_type in ["REG_IND_DISP_L","REG_IND_DISP_W","REG_IND_DISP_B"]:
+                           start,length,mask=instruction.operand_masks["d"]
+                           update=values[0]<<start
+                           print("update:",update)
+                           self.opcode|=update
+                           start,length,mask=instruction.operand_masks[reg_letter]
+                           update=values[1]<<start
+                           print("update:",update)
+                           self.opcode|=update
+                        elif arg_type in ["IMM8_SIGNED"]:
+                           start,length,mask=instruction.operand_masks["i"]
+                           update=values[0]<<start
+                           print("update:",update)
+                           self.opcode|=update
+
+            self.valid_opcode=True
 
 def load_instructions():
     #Load instruction information
     for k,v in instructions_raw.items():
         instruction=InstructionClass(k,v)
-        instructions[k]=instruction
+
+        #opcode lookup by IR
+        IR_key=[]
+        for word in k:
+            if word=="REG_IND_DISP":
+                if k[0]=="MOV.L":
+                    IR_key+=["REG_IND_DISP_L"]
+                elif k[0]=="MOV.W":
+                    IR_key+=["REG_IND_DISP_W"]
+                elif k[0]=="MOV.B":
+                    IR_key+=["REG_IND_DISP_B"]
+            elif word!="":
+                IR_key+=[word]
+        IR_lookup[tuple(IR_key)]=instruction
 
         #Add to opcode lookup
         fields=extract_fields(instruction.mask_raw)
@@ -671,8 +781,6 @@ def load_instructions():
         else:
             line=LineClass()
             line.opcode=opcode
-            #Address not used for lookup but need to set to something
-            line.address=i*2
             line.verify_opcode()
             line.opcode_to_IR()
             line.IR_to_tokens()

@@ -27,10 +27,9 @@ class InstructionClass:
             mask=((1<<length)-1)<<start
             self.operand_masks[letter]=(start,length,mask)
 
-
-instructions={}
 opcode_lookup={}
 token_lookup={}
+IR_lookup={}
 
 #Extract fields from mask
     #Needed to load instructions so not part of LineClass

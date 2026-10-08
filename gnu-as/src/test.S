@@ -896,10 +896,35 @@
 
     #mov #255,R0
 
-    mov #-128,R1
-    mov #128,R1
-    mov #0x80,R1
-    mov #-0x80,R1
+    #mov #-128,R1
+    #mov #128,R1
+    #mov #0x80,R1
+    #mov #-0x80,R1
 
-    cmp/eq #42,R0
+    #cmp/eq #42,R0
+
+    #mov.l r0,@(0,r0)
+    #mov.l r0,@(60,r0)
+
+    #mov.b r0,@(0,r0)
+    #mov.b r0,@(15,r0)
+
+    #One by one
+    #==========
+    #BT 0x4  #8900
+    #BT 2    #89FF
+    #BT 0    #89FE
+    #BT -2   #89FD   
+    #BT 6    #8901
+
+    #Pairs
+    #=====
+    #BT 0    #89FE
+    #BT 0    #89FD
+
+    #BT 4    #8900
+    #BT 4    #89FF
+
+    #BT 6    #8901
+    #BT 6    #8900
 

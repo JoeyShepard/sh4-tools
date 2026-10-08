@@ -69,14 +69,11 @@ def test_instructions():
         line_asm.text_to_tokens()
 
         #Check tokens
+        check_true(line_asm.valid_tokens)
         check(line_asm.tokens,line_disasm.tokens)
 
         #Create IR from tokens
         line_asm.tokens_to_IR()
-
-        print(f"{hex16(opcode)[2:]} disasm: {line_disasm.show_IR()}")
-        print(f"{hex16(opcode)[2:]}    asm: {line_asm.show_IR()}")
-        print()
 
         #Check IR
         check_true(line_asm.IR_equal(line_disasm))
@@ -94,22 +91,24 @@ def test_instructions():
         #Check IR
         check_true(line_asm.IR_equal(line_disasm))
 
+        #print(f"{hex16(opcode)[2:]} disasm: {line_disasm.show_IR()}")
+        #print(f"{hex16(opcode)[2:]}    asm: {line_asm.show_IR()}")
+        #print(line_asm.valid_opcode)
+        #print()
+
         #Create opcode
         if line_disasm.valid_opcode==True:
+            line_asm.address=opcode*2
             line_asm.IR_to_opcode()
 
-            #print(f"{hex16(opcode)[2:]} disasm: {line_disasm.show_IR()}")
-            #print(f"{hex16(line_asm.opcode)[2:]}    asm: {line_asm.show_IR()}")
-            #print()
-            #input()
-
-            #TODO: Check opcode
+            print(f"expected:  {hex16(opcode)[2:]} from ({line_asm.show_IR()})")
+            print(f"generated: {None if line_asm.opcode==None else hex16(line_asm.opcode)[2:]} ")
+            print()
             
+            #Check opcode
+            check_true(line_asm.valid_opcode)
+            check(line_asm.opcode,opcode)
 
-        #TODO: remove
-        #print(f"{hex16(opcode)[2:]} disasm: {line_disasm.show_IR()}")
-        #prinft(f"{hex16(opcode)[2:]}    asm: {line_asm.show_IR()}")
-        #print()
 
 
 
