@@ -50,6 +50,7 @@ class LineClass:
     def __init__(self):
         #Source - disassembler, assembler, etc
         self.source=None
+        self.address=None
 
         self.reset_opcode()
         self.reset_IR()
@@ -64,7 +65,6 @@ class LineClass:
     def reset_opcode(self):
         self.opcode=None
         self.key=None
-        self.address=None
         self.group=None
         self.mask_raw=None
         self.mask=None
@@ -563,9 +563,6 @@ class LineClass:
                         #Instruction
                         self.inst=tokens[0].value.upper()
 
-                        if self.opcode==0x8900:
-                            print("manual mode found")
-
                         #Addressing mode
                         if tokens[0].value.upper() in ("BT","BT.S","BF","BF.S"):
                             self.dest.type="PC_REL_8"
@@ -602,17 +599,23 @@ class LineClass:
 
             self.valid_IR=instruction_found
 
-    def __operand_prepare(self,operand_type,values):
+    def __operand_prepare(self,operand_type,values,address=None):
         return_values=[]
         if len(values)>=1:
             value=values[0]
 
-        print("prepare inner:",operand_type,values)
-
-        if operand_type in ["REG_DIR","IND_REG_IND","REG_IND_POST","REG_IND","REG_IND_PRE"]:
+        if operand_type in ["REG_DIR","IND_REG_IND","REG_IND_POST","REG_IND","REG_IND_PRE","FREG_DIR","FREG_FR0_DIR"]:
             if len(values)!=1 or value==None or value<0 or value>15:
                 return False,[]
             return True,[value]
+        elif operand_type=="FVREG_DIR":
+            if len(values)!=1 or value==None or value not in [0,4,8,12]:
+                return False,[]
+            return True,[int(value/4)]
+        elif operand_type=="DREG_DIR":
+            if len(values)!=1 or value==None or value not in [0,2,4,6,8,10,12,14]:
+                return False,[]
+            return True,[int(value/2)]
         elif operand_type in ["REG_BANK"]:
             if len(values)!=1 or value==None or value<0 or value>7:
                 return False,[]
@@ -644,8 +647,77 @@ class LineClass:
             if value<0:
                 value=256+value
             return True,[value]
+        elif operand_type in ["IMM8_UNSIGNED"]:
+            if len(values)!=1 or value==None or value<0 or value>255:
+                return False,[]
+            return True,[value]
+        elif operand_type=="GBR_IND_DISP_L":
+            if len(values)!=1 or value==None or value<0 or value>1020:
+                return False,[]
+            return True,[int(value/4)]
+        elif operand_type=="GBR_IND_DISP_W":
+            if len(values)!=1 or value==None or value<0 or value>510:
+                return False,[]
+            return True,[int(value/2)]
+        elif operand_type=="GBR_IND_DISP_B":
+            if len(values)!=1 or value==None or value<0 or value>255:
+                return False,[]
+            return True,[value]
+        elif operand_type=="PC_REL_8":
+            min_offset=-0xFC
+            max_offset=0x102
+            if address==None or len(values)!=1:
+                return False,[]
+            if value==None or value<0 or value%2!=0:
+                return False,[]
+            offset=value-address
+            if offset<min_offset or offset>max_offset:
+                return False,[]
+            offset=int((offset-4)/2)
+            if offset<0:
+                offset=0x100+offset
+            return True,[offset]
+        elif operand_type=="PC_REL_12":
+            min_offset=-0xFFC
+            max_offset=0x1002
+            if address==None or len(values)!=1:
+                return False,[]
+            if value==None or value<0 or value%2!=0:
+                return False,[]
+            offset=value-address
+            if offset<min_offset or offset>max_offset:
+                return False,[]
+            offset=int((offset-4)/2)
+            if offset<0:
+                offset=0x1000+offset
+            return True,[offset]
+        elif operand_type=="PC_REL_ABS_W":
+            min_offset=4
+            max_offset=0x202
+            if address==None or len(values)!=1:
+                return False,[]
+            if value==None or value<0 or value%2!=0:
+                return False,[]
+            offset=value-address
+            if offset<min_offset or offset>max_offset:
+                return False,[]
+            offset=int((offset-4)/2)
+            return True,[offset]
+        elif operand_type=="PC_REL_ABS_L":
+            min_offset=4
+            max_offset=0x400
+            if address==None or len(values)!=1:
+                return False,[]
+            if value==None or value<0 or value%4!=0:
+                return False,[]
+            offset=value-address
+            if offset<min_offset or offset>max_offset:
+                return False,[]
+            offset+=address%4
+            offset=int((offset-4)/4)
+            return True,[offset]
         else:
-            return False,[]
+            return None,[]
 
     def IR_to_opcode(self):
         self.reset_opcode()
@@ -668,8 +740,14 @@ class LineClass:
 
             pattern=tuple(pattern)
 
-            print(pattern,pattern in IR_lookup)
-
+            branch_lookup={
+                "BT":0x8900,
+                "BT.S":0x8D00,
+                "BT/S":0x8D00,
+                "BF":0x8B00,
+                "BF.S":0x8F00,
+                "BF/S":0x8F00
+                }
             if pattern in IR_lookup:
                 instruction=IR_lookup[pattern]
                 self.opcode=instruction.id
@@ -681,33 +759,84 @@ class LineClass:
                     reg_letter="mn"[i]
                    
                     valid,values=self.__operand_prepare(arg_type,arg_values)
-                    print("prepared value:",values)
                     if valid==False:
-                        #No arg or invalid arg like R16
+                        #Invalid arg like R16
+                        return
+                    elif valid==None:
+                        #Argument has no affect on opcode
                         pass
                     else:
+                        #Apply information from operand to instruction
                         if arg_type in ["REG_DIR","IND_REG_IND","REG_IND_POST","REG_BANK","REG_IND","REG_IND_PRE",
-                                        ]:
+                                        "FREG_DIR","FREG_FR0_DIR","FVREG_DIR","DREG_DIR"]:
                            start,length,mask=instruction.operand_masks[reg_letter]
                            update=values[0]<<start
-                           print("update:",update)
                            self.opcode|=update
                         elif arg_type in ["REG_IND_DISP_L","REG_IND_DISP_W","REG_IND_DISP_B"]:
-                           start,length,mask=instruction.operand_masks["d"]
-                           update=values[0]<<start
-                           print("update:",update)
+                           update=values[0]
                            self.opcode|=update
                            start,length,mask=instruction.operand_masks[reg_letter]
                            update=values[1]<<start
-                           print("update:",update)
                            self.opcode|=update
-                        elif arg_type in ["IMM8_SIGNED"]:
-                           start,length,mask=instruction.operand_masks["i"]
-                           update=values[0]<<start
-                           print("update:",update)
+                        elif arg_type in ["IMM8_SIGNED","IMM8_UNSIGNED","GBR_IND_DISP_L","GBR_IND_DISP_W","GBR_IND_DISP_B"]:
+                           update=values[0]
                            self.opcode|=update
+                self.valid_opcode=True
+            elif len(pattern)==2 and pattern[0] in branch_lookup and pattern[1]=="PC_REL_8":
+                self.opcode=branch_lookup[pattern[0]]
+                valid,values=self.__operand_prepare("PC_REL_8",self.dest.values,self.address)
+                if valid==False:
+                    #Invalid arg like R16
+                    return
+                else:
+                    self.opcode|=values[0]
+                self.valid_opcode=True
+            elif len(pattern)==3 and pattern==("MOV.L","PC_REL_ABS_L","REG_DIR"):
+                self.opcode=0xD000
+                valid,values=self.__operand_prepare(self.src.type,self.src.values,self.address)
+                if valid==False:
+                    #Invalid arg like R16
+                    return
+                self.opcode|=values[0]
 
-            self.valid_opcode=True
+                valid,values=self.__operand_prepare(self.dest.type,self.dest.values)
+                if valid==False:
+                    #Invalid arg like R16
+                    return
+                self.opcode|=(values[0]<<8) 
+                self.valid_opcode=True
+            elif len(pattern)==3 and pattern==("MOV.W","PC_REL_ABS_W","REG_DIR"):
+                self.opcode=0x9000
+                valid,values=self.__operand_prepare(self.src.type,self.src.values,self.address)
+                if valid==False:
+                    #Invalid arg like R16
+                    return
+                self.opcode|=values[0]
+
+                valid,values=self.__operand_prepare(self.dest.type,self.dest.values)
+                if valid==False:
+                    #Invalid arg like R16
+                    return
+                self.opcode|=(values[0]<<8) 
+                self.valid_opcode=True
+            elif len(pattern)==2 and pattern[0] in ["BRA","BSR"] and pattern[1]=="PC_REL_12":
+                self.opcode=0xA000 if pattern[0]=="BRA" else 0xB000
+                valid,values=self.__operand_prepare("PC_REL_12",self.dest.values,self.address)
+                if valid==False:
+                    #Invalid arg like R16
+                    return
+                else:
+                    self.opcode|=values[0]
+                self.valid_opcode=True
+            elif len(pattern)==3 and pattern==("MOVA","PC_REL_ABS_L","REG_R0"):
+                self.opcode=0xC700
+                valid,values=self.__operand_prepare("PC_REL_ABS_L",self.src.values,self.address)
+                if valid==False:
+                    #Invalid arg like R16
+                    return
+                else:
+                    self.opcode|=values[0]
+                self.valid_opcode=True
 
 def load_instructions():
     #Load instruction information
@@ -715,18 +844,22 @@ def load_instructions():
         instruction=InstructionClass(k,v)
 
         #opcode lookup by IR
-        IR_key=[]
-        for word in k:
-            if word=="REG_IND_DISP":
-                if k[0]=="MOV.L":
-                    IR_key+=["REG_IND_DISP_L"]
-                elif k[0]=="MOV.W":
-                    IR_key+=["REG_IND_DISP_W"]
-                elif k[0]=="MOV.B":
-                    IR_key+=["REG_IND_DISP_B"]
-            elif word!="":
-                IR_key+=[word]
-        IR_lookup[tuple(IR_key)]=instruction
+        if k[0] not in ["BT","BT.S","BT/S","BF","BF.S","BF/S"] and \
+            k not in [("MOV.L","PC_REL_ABS","REG_DIR"),("MOV.W","PC_REL_ABS","REG_DIR"),
+                        ("BRA","","PC_REL_12"),("BSR","","PC_REL_12"),
+                        ('MOVA', 'PC_REL_ABS', 'REG_R0')]:
+            IR_key=[]
+            for word in k:
+                if word in ["REG_IND_DISP","GBR_IND_DISP"]:
+                    if k[0]=="MOV.L":
+                        IR_key+=[word+"_L"]
+                    elif k[0]=="MOV.W":
+                        IR_key+=[word+"_W"]
+                    elif k[0]=="MOV.B":
+                        IR_key+=[word+"_B"]
+                elif word!="":
+                    IR_key+=[word]
+            IR_lookup[tuple(IR_key)]=instruction
 
         #Add to opcode lookup
         fields=extract_fields(instruction.mask_raw)

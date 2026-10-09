@@ -927,4 +927,37 @@
 
     #BT 6    #8901
     #BT 6    #8900
+    
+    #.org 0
+    #BT 0x102
 
+    #.org 0x100
+    #BT 0x4
+
+    #whether aligned to 2 or 4 bytes doesnt matter
+    #.org 0x300
+    #BT 0x204
+    #BT 0x206
+    #BT 0x406
+    #BT 0x408
+
+    #whether aligned to 2 or 4 bytes doesnt matter
+    #.org 0
+    #MOV.W 4,R0
+    #MOV.W 6,R0
+    #.org 0
+    #MOV.W 0x202,R0
+    #MOV.W 0x203,R0
+
+    #.org 0x1000
+    #BRA 0x4
+
+    #mov.b R0,@(-128,GBR)
+
+    #.org 0
+    #mova 0x400,R0
+    #mova 0x3FC,R0
+
+    .org 0
+    mova 8,R0
+    mova 8,R0

@@ -12,5 +12,4 @@ rm -f build/*
 
 sh4-linux-gnu-gcc -mb -m4a -c -o build/test.o src/test.S
 
-
 sh4-linux-gnu-objcopy -O binary build/test.o build/test.bin
